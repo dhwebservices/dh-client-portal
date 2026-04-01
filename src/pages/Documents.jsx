@@ -15,16 +15,26 @@ const fileIcon = (name) => {
 }
 
 export default function Documents() {
-  const { user } = useAuth()
+  const { clientEmail } = useAuth()
   const [docs, setDocs]     = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { if (user?.email) fetchDocs() }, [user])
+  useEffect(() => { if (clientEmail) fetchDocs() }, [clientEmail])
+
+  useEffect(() => {
+    if (!clientEmail) return
+    const channel = supabase
+      .channel(`client-documents-${clientEmail}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_documents', filter: `client_email=eq.${clientEmail}` }, fetchDocs)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [clientEmail])
 
   const fetchDocs = async () => {
     setLoading(true)
     const { data } = await supabase.from('client_documents')
-      .select('*').ilike('client_email', user.email).order('created_at', { ascending: false })
+      .select('*').ilike('client_email', clientEmail).order('created_at', { ascending: false })
     setDocs(data || [])
     setLoading(false)
   }
@@ -55,12 +65,12 @@ export default function Documents() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {docs.map(doc => {
-            const { icon, color } = fileIcon(doc.file_name)
+            const { icon, color } = fileIcon(doc.file_name || doc.name)
             return (
-              <div key={doc.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: 'var(--shadow)' }}>
+            <div key={doc.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px', boxShadow: 'var(--shadow)' }}>
                 <div style={{ width: 42, height: 42, borderRadius: '10px', background: `${color}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>{icon}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>{doc.file_name}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '3px' }}>{doc.file_name || doc.name}</div>
                   <div style={{ fontSize: '12px', color: 'var(--sub)' }}>
                     {doc.created_at?.split('T')[0]}
                     {doc.description && ` · ${doc.description}`}

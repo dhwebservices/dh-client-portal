@@ -5,16 +5,26 @@ import { supabase } from '../utils/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Invoices() {
-  const { user } = useAuth()
+  const { clientEmail } = useAuth()
   const [invoices, setInvoices] = useState([])
   const [loading, setLoading]   = useState(true)
 
-  useEffect(() => { if (user?.email) fetchInvoices() }, [user])
+  useEffect(() => { if (clientEmail) fetchInvoices() }, [clientEmail])
+
+  useEffect(() => {
+    if (!clientEmail) return
+    const channel = supabase
+      .channel(`client-invoices-${clientEmail}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_invoices', filter: `client_email=eq.${clientEmail}` }, fetchInvoices)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [clientEmail])
 
   const fetchInvoices = async () => {
     setLoading(true)
     const { data } = await supabase.from('client_invoices')
-      .select('*').ilike('client_email', user.email).order('created_at', { ascending: false })
+      .select('*').ilike('client_email', clientEmail).order('created_at', { ascending: false })
     setInvoices(data || [])
     setLoading(false)
   }

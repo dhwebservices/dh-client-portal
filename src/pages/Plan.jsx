@@ -5,16 +5,39 @@ import { supabase } from '../utils/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function Plan() {
-  const { user } = useAuth()
-  const [client, setClient] = useState(null)
+  const { clientAccount, clientEmail, refreshClientAccount } = useAuth()
+  const [client, setClient] = useState(clientAccount)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (user?.email) {
-      supabase.from('client_accounts').select('*').ilike('email', user.email).single()
-        .then(({ data }) => { setClient(data); setLoading(false) })
+    let cancelled = false
+
+    const load = async () => {
+      if (!clientEmail) return
+      setLoading(true)
+      const resolved = clientAccount || await refreshClientAccount(clientEmail)
+      if (!cancelled) {
+        setClient(resolved)
+        setLoading(false)
+      }
     }
-  }, [user])
+
+    load()
+    return () => { cancelled = true }
+  }, [clientEmail, clientAccount?.id])
+
+  useEffect(() => {
+    if (!clientEmail) return
+    const channel = supabase
+      .channel(`client-plan-${clientEmail}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_accounts', filter: `email=eq.${clientEmail}` }, async () => {
+        const refreshed = await refreshClientAccount(clientEmail)
+        setClient(refreshed)
+      })
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [clientEmail])
 
   const planFeatures = {
     'Monthly Starter': ['1-page website', 'Mobile responsive', 'Contact form', 'Basic SEO setup', 'Monthly updates'],

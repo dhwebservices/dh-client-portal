@@ -18,6 +18,17 @@ export default function BannerDisplay({ userEmail }) {
 
   useEffect(() => { fetchBanners() }, [userEmail])
 
+  useEffect(() => {
+    if (!userEmail) return
+    const channel = supabase
+      .channel(`client-banners-${userEmail}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'banners' }, fetchBanners)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'banner_dismissals', filter: `user_email=eq.${userEmail}` }, fetchBanners)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [userEmail])
+
   const fetchBanners = async () => {
     const { data } = await supabase.from('banners')
       .select('*').eq('active', true).order('created_at', { ascending: false })

@@ -15,6 +15,7 @@ import Support        from './pages/Support'
 import Activity       from './pages/Activity'
 
 function PortalLayout() {
+  const { clientEmail } = useAuth()
   const { accounts } = useMsal()
   const user = accounts[0]
   const [darkMode, setDarkMode] = useState(false)
@@ -60,7 +61,7 @@ function PortalLayout() {
       <div style={{ marginLeft: isMobile ? 0 : '220px', flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', minWidth: 0, overflow: 'hidden' }}>
         <Header darkMode={darkMode} onToggleDark={() => setDarkMode(p => !p)} isMobile={isMobile} />
         <main style={{ marginTop: isMobile ? '56px' : '64px', padding: isMobile ? '16px' : '28px', flex: 1, minWidth: 0, overflowX: 'hidden' }}>
-          <BannerDisplay userEmail={user?.username} />
+          <BannerDisplay userEmail={clientEmail} />
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/plan"      element={<Plan />} />

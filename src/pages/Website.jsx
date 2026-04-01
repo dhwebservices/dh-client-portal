@@ -12,37 +12,27 @@ const STAGES = [
 ]
 
 export default function Website() {
-  const { user } = useAuth()
-  const [client, setClient]   = useState(null)
+  const { user, clientAccount, clientEmail, refreshClientAccount } = useAuth()
+  const [client, setClient]   = useState(clientAccount)
   const [updates, setUpdates] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { if (user?.email) fetchData() }, [user])
+  useEffect(() => { if (clientEmail) fetchData() }, [clientEmail, clientAccount?.id])
 
   // Real-time: refresh when deployment_updates or client_accounts change
   useEffect(() => {
-    if (!user?.email) return
+    if (!clientEmail) return
     const channel = supabase.channel('website-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deployment_updates', filter: `client_email=eq.${user.email}` }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_accounts', filter: `email=eq.${user.email}` }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deployment_updates', filter: `client_email=eq.${clientEmail}` }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_accounts', filter: `email=eq.${clientEmail}` }, fetchData)
       .subscribe()
     return () => supabase.removeChannel(channel)
-  }, [user])
+  }, [clientEmail])
 
   const fetchData = async () => {
     setLoading(true)
-    // Try both the Microsoft UPN and any email variations
-    const emails = [user.email, user.email?.toLowerCase()].filter(Boolean)
-    
-    // Find client account - try exact match first
-    let clientData = null
-    for (const email of emails) {
-      const { data } = await supabase.from('client_accounts').select('*').ilike('email', email).single()
-      if (data) { clientData = data; break }
-    }
-    
-    // Get updates using the matched email or fallback to user email
-    const lookupEmail = clientData?.email || user.email
+    const clientData = clientAccount || await refreshClientAccount(user?.email)
+    const lookupEmail = clientData?.email || clientEmail
     const { data: updatesData } = await supabase.from('deployment_updates')
       .select('*').ilike('client_email', lookupEmail).order('created_at', { ascending: false })
     

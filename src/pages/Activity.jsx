@@ -34,16 +34,26 @@ function groupByDate(events) {
 }
 
 export default function Activity() {
-  const { user } = useAuth()
+  const { clientEmail } = useAuth()
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { if (user?.email) fetchActivity() }, [user])
+  useEffect(() => { if (clientEmail) fetchActivity() }, [clientEmail])
+
+  useEffect(() => {
+    if (!clientEmail) return
+    const channel = supabase
+      .channel(`client-activity-${clientEmail}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_activity', filter: `client_email=eq.${clientEmail}` }, fetchActivity)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [clientEmail])
 
   const fetchActivity = async () => {
     setLoading(true)
     const { data } = await supabase.from('client_activity')
-      .select('*').ilike('client_email', user.email)
+      .select('*').ilike('client_email', clientEmail)
       .order('created_at', { ascending: false }).limit(100)
     setEvents(data || [])
     setLoading(false)
@@ -79,7 +89,8 @@ export default function Activity() {
               <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--sub)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>{dateLabel}</div>
               <Card style={{ padding: 0 }}>
                 {items.map((event, i) => {
-                  const type = eventTypes[event.event_type] || { icon: '📋', label: event.event_type, color: 'var(--sub)' }
+                  const eventKey = event.event_type || event.type
+                  const type = eventTypes[eventKey] || { icon: '📋', label: eventKey || 'activity', color: 'var(--sub)' }
                   return (
                     <div key={event.id} style={{
                       display: 'flex', gap: '14px', padding: '14px 18px',
@@ -92,7 +103,7 @@ export default function Activity() {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '17px',
                       }}>{type.icon}</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{type.label}</div>
+                        <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text)', marginBottom: '3px' }}>{event.title || type.label}</div>
                         {event.description && <div style={{ fontSize: '13px', color: 'var(--sub)', lineHeight: 1.5 }}>{event.description}</div>}
                         {event.amount && <div style={{ fontSize: '13px', fontWeight: 700, color: type.color, marginTop: '4px' }}>£{Number(event.amount).toFixed(2)}</div>}
                       </div>

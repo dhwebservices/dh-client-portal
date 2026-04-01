@@ -10,7 +10,7 @@ const priorityColor = { Normal: 'var(--sub)', High: 'var(--amber)', Urgent: 'var
 const statusVariant = { open: 'open', 'in-progress': 'building', resolved: 'resolved' }
 
 export default function Support() {
-  const { user } = useAuth()
+  const { user, clientAccount, clientEmail, refreshClientAccount } = useAuth()
   const [tickets, setTickets]   = useState([])
   const [loading, setLoading]   = useState(true)
   const [modal, setModal]       = useState(false)
@@ -19,12 +19,22 @@ export default function Support() {
   const [selected, setSelected] = useState(null)
   const [detailModal, setDetailModal] = useState(false)
 
-  useEffect(() => { if (user?.email) fetchTickets() }, [user])
+  useEffect(() => { if (clientEmail) fetchTickets() }, [clientEmail, clientAccount?.id])
+
+  useEffect(() => {
+    if (!clientEmail) return
+    const channel = supabase
+      .channel(`client-support-${clientEmail}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets', filter: `client_email=eq.${clientEmail}` }, fetchTickets)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [clientEmail])
 
   const fetchTickets = async () => {
     setLoading(true)
     const { data } = await supabase.from('support_tickets')
-      .select('*').ilike('client_email', user.email).order('created_at', { ascending: false })
+      .select('*').ilike('client_email', clientEmail).order('created_at', { ascending: false })
     setTickets(data || [])
     setLoading(false)
   }
@@ -32,22 +42,25 @@ export default function Support() {
   const submit = async () => {
     if (!form.subject || !form.message) return
     setSaving(true)
+    const resolvedClient = clientAccount || await refreshClientAccount(user?.email)
+    const lookupEmail = resolvedClient?.email || clientEmail
+    const lookupName = resolvedClient?.name || user?.name
     await supabase.from('support_tickets').insert([{
-      ...form, client_email: user.email, client_name: user.name, status: 'open',
+      ...form, client_email: lookupEmail, client_name: lookupName, status: 'open',
     }])
     // Email clients@ to notify staff
     await sendEmail('support_ticket_raised', {
-      clientName:  user.name,
-      clientEmail: user.email,
+      clientName:  lookupName,
+      clientEmail: lookupEmail,
       subject:     form.subject,
       message:     form.message,
       priority:    form.priority,
     })
-    // Staff portal notification
+    // Client confirmation notification
     await supabase.from('notifications').insert([{
-      user_email: null,
-      title: `New support ticket from ${user.name}`,
-      message: form.subject,
+      user_email: lookupEmail,
+      title: 'Support query received',
+      message: `We’ve logged "${form.subject}" and the team will reply soon.`,
       type: 'info',
       link: '/support',
     }])

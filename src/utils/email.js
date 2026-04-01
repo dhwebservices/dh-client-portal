@@ -8,8 +8,9 @@ export async function sendEmail(type, data) {
       body: JSON.stringify({ type, data }),
     })
     const result = await res.json()
-    if (!result.success) console.error('Email error:', result.error)
-    return result.success
+    const success = Boolean(result?.success ?? result?.ok)
+    if (!success) console.error('Email error:', result.error || result)
+    return success
   } catch (err) {
     console.error('Email send failed:', err)
     return false

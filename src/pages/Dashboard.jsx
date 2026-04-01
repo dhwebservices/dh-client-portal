@@ -6,43 +6,39 @@ import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, clientAccount, clientEmail, refreshClientAccount } = useAuth()
   const nav = useNavigate()
-  const [client, setClient]     = useState(null)
   const [invoices, setInvoices] = useState([])
   const [tickets, setTickets]   = useState([])
   const [updates, setUpdates]   = useState([])
   const [loading, setLoading]   = useState(true)
 
   useEffect(() => {
-    if (user?.email) fetchAll()
-  }, [user])
+    if (clientEmail) fetchAll()
+  }, [clientEmail, clientAccount?.id])
 
   // Real-time updates
   useEffect(() => {
-    if (!user?.email) return
+    if (!clientEmail) return
     const channel = supabase.channel('dashboard-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_accounts',    filter: `email=eq.${user.email}` },        fetchAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_invoices',    filter: `client_email=eq.${user.email}` }, fetchAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets',    filter: `client_email=eq.${user.email}` }, fetchAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deployment_updates', filter: `client_email=eq.${user.email}` }, fetchAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_accounts',    filter: `email=eq.${clientEmail}` },        fetchAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'client_invoices',    filter: `client_email=eq.${clientEmail}` }, fetchAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets',    filter: `client_email=eq.${clientEmail}` }, fetchAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'deployment_updates', filter: `client_email=eq.${clientEmail}` }, fetchAll)
       .subscribe()
     return () => supabase.removeChannel(channel)
-  }, [user])
+  }, [clientEmail])
 
   const fetchAll = async () => {
     setLoading(true)
-
-    // Find client account with case-insensitive match
-    const { data: c } = await supabase.from('client_accounts').select('*').ilike('email', user.email).single()
-    const lookupEmail = c?.email || user.email
+    const resolvedClient = clientAccount || await refreshClientAccount(user?.email)
+    const lookupEmail = resolvedClient?.email || clientEmail
 
     const [{ data: inv }, { data: tick }, { data: upd }] = await Promise.all([
       supabase.from('client_invoices').select('*').ilike('client_email', lookupEmail).order('created_at', { ascending: false }).limit(3),
       supabase.from('support_tickets').select('*').ilike('client_email', lookupEmail).eq('status', 'open').limit(3),
       supabase.from('deployment_updates').select('*').ilike('client_email', lookupEmail).order('created_at', { ascending: false }).limit(3),
     ])
-    setClient(c)
     setInvoices(inv || [])
     setTickets(tick || [])
     setUpdates(upd || [])
@@ -52,9 +48,9 @@ export default function Dashboard() {
   const unpaidInvoices = invoices.filter(i => i.status === 'unpaid')
 
   const quickLinks = [
-    { icon: CreditCard,    label: 'My Plan',   sub: client?.plan || 'View your package',  to: '/plan',     color: 'var(--accent)'  },
+    { icon: CreditCard,    label: 'My Plan',   sub: clientAccount?.plan || 'View your package',  to: '/plan',     color: 'var(--accent)'  },
     { icon: FileText,      label: 'Invoices',  sub: unpaidInvoices.length > 0 ? `${unpaidInvoices.length} outstanding` : 'All paid ✓', to: '/invoices', color: '#7C3AED', alert: unpaidInvoices.length > 0 },
-    { icon: Globe,         label: 'My Website',sub: client?.deployment_status?.replace(/_/g,' ') || 'View progress', to: '/website', color: 'var(--green)' },
+    { icon: Globe,         label: 'My Website',sub: clientAccount?.deployment_status?.replace(/_/g,' ') || 'View progress', to: '/website', color: 'var(--green)' },
     { icon: MessageSquare, label: 'Support',   sub: tickets.length > 0 ? `${tickets.length} open ticket${tickets.length > 1 ? 's' : ''}` : 'Get help', to: '/support', color: 'var(--amber)', alert: tickets.length > 0 },
   ]
 
@@ -72,7 +68,7 @@ export default function Dashboard() {
           {user?.name?.split(' ')[0] ?? 'there'} 👋
         </h2>
         <p style={{ fontSize: '14px', opacity: 0.85 }}>
-          {client ? `You're on the ${client.plan} plan.` : 'Your DH Website Services client portal.'}
+          {clientAccount ? `You're on the ${clientAccount.plan} plan.` : 'Your DH Website Services client portal.'}
         </p>
       </div>
 
@@ -115,7 +111,7 @@ export default function Dashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
         {/* Website status */}
-        {client && (
+        {clientAccount && (
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '15px' }}>Website Progress</h3>
@@ -123,7 +119,7 @@ export default function Dashboard() {
                 Details <ChevronRight size={14} />
               </button>
             </div>
-            <StatusTracker status={client.deployment_status || 'accepted'} />
+            <StatusTracker status={clientAccount.deployment_status || 'accepted'} />
           </Card>
         )}
 

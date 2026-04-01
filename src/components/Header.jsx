@@ -3,6 +3,7 @@ import { Bell, Sun, Moon } from 'lucide-react'
 import { useMsal } from '@azure/msal-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { supabase } from '../utils/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 const titles = {
   '/dashboard': 'Dashboard',
@@ -15,6 +16,7 @@ const titles = {
 }
 
 export default function Header({ darkMode, onToggleDark, isMobile }) {
+  const { clientEmail } = useAuth()
   const { accounts, instance } = useMsal()
   const user = accounts[0]
   const loc  = useLocation()
@@ -25,7 +27,18 @@ export default function Header({ darkMode, onToggleDark, isMobile }) {
   const [profilePhoto, setProfilePhoto] = useState(null)
   const notifRef = useRef()
 
-  useEffect(() => { if (user?.username) { fetchNotifs(); fetchProfilePhoto() } }, [user])
+  useEffect(() => { if (user?.username) { fetchProfilePhoto() } }, [user])
+  useEffect(() => { if (clientEmail) fetchNotifs() }, [clientEmail])
+
+  useEffect(() => {
+    if (!clientEmail) return
+    const channel = supabase
+      .channel(`client-notifications-${clientEmail}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_email=eq.${clientEmail}` }, fetchNotifs)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [clientEmail])
 
   const fetchProfilePhoto = async () => {
     try {
@@ -47,16 +60,18 @@ export default function Header({ darkMode, onToggleDark, isMobile }) {
   }, [])
 
   const fetchNotifs = async () => {
+    if (!clientEmail) return
     const { data } = await supabase.from('notifications')
       .select('*')
-      .or(`user_email.eq.${user.username},user_email.is.null`)
+      .eq('user_email', clientEmail)
       .order('created_at', { ascending: false }).limit(15)
     setNotifications(data || [])
     setUnread((data || []).filter(n => !n.read).length)
   }
 
   const markAllRead = async () => {
-    await supabase.from('notifications').update({ read: true }).or(`user_email.eq.${user?.username},user_email.is.null`)
+    if (!clientEmail) return
+    await supabase.from('notifications').update({ read: true }).eq('user_email', clientEmail)
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
     setUnread(0)
   }

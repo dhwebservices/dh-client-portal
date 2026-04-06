@@ -10,6 +10,8 @@ const eventTypes = {
   status_updated:    { icon: '🔄', label: 'Website Status Updated', color: '#1A56DB' },
   update_posted:     { icon: '📢', label: 'Update from Team',       color: '#1A56DB' },
   document_uploaded: { icon: '📁', label: 'Document Added',         color: '#F59E0B' },
+  contract_issued:   { icon: '✍️', label: 'Contract Issued',        color: '#1A56DB' },
+  contract_signed:   { icon: '✅', label: 'Contract Signed',        color: '#10B981' },
   support_raised:    { icon: '💬', label: 'Support Query Raised',   color: '#F59E0B' },
   support_replied:   { icon: '✉️', label: 'Support Reply',          color: '#10B981' },
   account_created:   { icon: '🎉', label: 'Account Created',        color: '#10B981' },

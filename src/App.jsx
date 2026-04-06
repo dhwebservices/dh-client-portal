@@ -11,6 +11,7 @@ import Plan           from './pages/Plan'
 import Invoices       from './pages/Invoices'
 import Website        from './pages/Website'
 import Documents      from './pages/Documents'
+import Contracts      from './pages/Contracts'
 import Support        from './pages/Support'
 import Activity       from './pages/Activity'
 
@@ -68,6 +69,7 @@ function PortalLayout() {
             <Route path="/invoices"  element={<Invoices />} />
             <Route path="/website"   element={<Website />} />
             <Route path="/documents" element={<Documents />} />
+            <Route path="/contracts" element={<Contracts />} />
             <Route path="/support"   element={<Support />} />
             <Route path="/activity"  element={<Activity />} />
             <Route path="*"          element={<Navigate to="/dashboard" replace />} />

@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useMsal } from '@azure/msal-react'
-import { LayoutDashboard, CreditCard, FileText, Globe, FolderOpen, MessageSquare, Activity, LogOut, Menu, X } from 'lucide-react'
+import { LayoutDashboard, CreditCard, FileText, Globe, FolderOpen, FileSignature, MessageSquare, Activity, LogOut, Menu, X } from 'lucide-react'
 const NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard'  },
   { to: '/plan',      icon: CreditCard,      label: 'My Plan'    },
   { to: '/invoices',  icon: FileText,        label: 'Invoices'   },
   { to: '/website',   icon: Globe,           label: 'My Website' },
   { to: '/documents', icon: FolderOpen,      label: 'Documents'  },
+  { to: '/contracts', icon: FileSignature,   label: 'Contracts'  },
   { to: '/support',   icon: MessageSquare,   label: 'Support'    },
   { to: '/activity',  icon: Activity,        label: 'Activity'   },
 ]

@@ -11,6 +11,7 @@ const titles = {
   '/invoices':  'Invoices',
   '/website':   'My Website',
   '/documents': 'Documents',
+  '/contracts': 'Contracts',
   '/support':   'Support',
   '/activity':  'Activity',
 }

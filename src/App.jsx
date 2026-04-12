@@ -7,6 +7,7 @@ import Header         from './components/Header'
 import BannerDisplay  from './components/BannerDisplay'
 import LoginPage      from './pages/LoginPage'
 import Dashboard      from './pages/Dashboard'
+import Onboarding     from './pages/Onboarding'
 import Plan           from './pages/Plan'
 import Invoices       from './pages/Invoices'
 import Website        from './pages/Website'
@@ -65,6 +66,7 @@ function PortalLayout() {
           <BannerDisplay userEmail={clientEmail} />
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/plan"      element={<Plan />} />
             <Route path="/invoices"  element={<Invoices />} />
             <Route path="/website"   element={<Website />} />

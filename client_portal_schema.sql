@@ -90,3 +90,12 @@ create policy "Allow all" on client_documents   for all using (true) with check 
 create policy "Allow all" on deployment_updates for all using (true) with check (true);
 create policy "Allow all" on support_tickets    for all using (true) with check (true);
 create policy "Allow all" on client_activity    for all using (true) with check (true);
+
+-- Client onboarding keys are stored in portal_settings so the staff portal can
+-- read the data immediately without a separate sync service.
+-- Summary key pattern:
+--   client_onboarding:<client_email>
+-- Section key pattern:
+--   client_onboarding_section:<client_email>:<section_key>
+-- Lifecycle sync key pattern:
+--   client_lifecycle:<client_account_id>

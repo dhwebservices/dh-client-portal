@@ -109,3 +109,9 @@ textarea { min-height: 110px; resize: vertical; }
   .bar__who .who-email { display: none; }
   .section { padding: 18px 16px; }
 }
+
+/* Staff tabs and team list */
+.tabs { display: flex; gap: 4px; margin-bottom: 22px; border-bottom: 1px solid var(--border); }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 8px 12px; font: inherit; font-weight: 600; color: var(--mid); cursor: pointer; }
+.tabs button.is-on { color: var(--ink); border-bottom-color: var(--accent); }
+.team-row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }

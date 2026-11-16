@@ -3,8 +3,9 @@ pages_build_output_dir = "dist"
 compatibility_date = "2026-10-01"
 
 [vars]
-# Signed-in with one of these addresses = staff view (every client, editing).
-ADMINS = "david@dhwebsiteservices.co.uk,jack@dhwebsiteservices.co.uk"
+# Owners: staff view (every client, editing) plus the Team page, where they
+# add and remove other staff (stored in the staff table, not here).
+OWNERS = "david@dhwebsiteservices.co.uk"
 APP_URL = "https://app.dhwebsiteservices.co.uk"
 # Email goes out through the main site's relay (functions/api/client-mail.js
 # in DH-Website-New), so this project holds no email key.

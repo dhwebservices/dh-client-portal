@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from './api'
 import ClientPage from './ClientPage'
+import Team from './Team'
 
 export default function Staff({ me }) {
   const [clients, setClients] = useState(null)
@@ -8,6 +9,7 @@ export default function Staff({ me }) {
   const [adding, setAdding] = useState(false)
   const [business, setBusiness] = useState('')
   const [error, setError] = useState('')
+  const [tab, setTab] = useState('clients')
 
   const load = () => api('admin/clients').then((r) => setClients(r.clients)).catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
@@ -22,8 +24,27 @@ export default function Staff({ me }) {
     } catch (err) { setError(err.message) }
   }
 
+  const tabs = (
+    <nav className="tabs" aria-label="Staff">
+      <button className={tab === 'clients' ? 'is-on' : ''} onClick={() => setTab('clients')}>Clients</button>
+      <button className={tab === 'team' ? 'is-on' : ''} onClick={() => setTab('team')}>Team</button>
+    </nav>
+  )
+
+  if (tab === 'team') return (
+    <>
+      {tabs}
+      <div className="page__head">
+        <h1>Team</h1>
+        <p>Who can sign in as staff.</p>
+      </div>
+      <Team me={me} />
+    </>
+  )
+
   return (
     <>
+      {tabs}
       <div className="page__head">
         <h1>Clients</h1>
         <p>Signed in as staff. Pick a client to see their page exactly as they do, with edit controls.</p>

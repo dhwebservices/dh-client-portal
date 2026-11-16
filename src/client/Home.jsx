@@ -23,7 +23,7 @@ export default function Home({ me, data, admin, go }) {
 
       {todo.length > 0 && (
         <section className="section section--warn">
-          <h2>Waiting for you</h2>
+          <h2>{admin ? 'Waiting for the client' : 'Waiting for you'}</h2>
           <ul className="todo">
             {todo.map((t) => (
               <li key={t.key}><button className="todo__item" onClick={() => go(t.tab)}><span className={`dot dot--${t.tone}`} />{t.text}<span className="todo__go">→</span></button></li>

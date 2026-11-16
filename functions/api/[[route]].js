@@ -1,8 +1,10 @@
 // DH client area API.
 //
 // Sign-in is an emailed 6-digit code: no passwords, no Microsoft account.
-// Clients see only their own business. Addresses in ADMINS see every client
-// and can edit. All data is in this project's private D1 database.
+// Clients see only their own business. Staff see every client and can edit.
+// Owners (OWNERS in wrangler.toml) are staff who can also add and remove
+// staff on the Team page; other staff live in the staff table. All data is in
+// this project's private D1 database.
 
 const DAY = 86400000
 const json = (body, status = 200, headers = {}) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers } })
@@ -20,14 +22,22 @@ const clean = (s, max = 2000) => String(s ?? '').trim().slice(0, max)
 const url = (s) => { const v = clean(s, 500); if (!v) return null; if (!/^https:\/\//i.test(v)) throw new Err(400, 'Links must start with https://'); return v }
 
 async function body(req) { try { return await req.json() } catch { return {} } }
-const admins = (env) => String(env.ADMINS || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)
+const owners = (env) => String(env.OWNERS || '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean)
+const nameFrom = (email) => email.split('@')[0].replace(/^./, (c) => c.toUpperCase())
+const staffRow = (env, email) => env.DB.prepare('SELECT * FROM staff WHERE email = ?').bind(email).first()
+const isStaff = async (env, email) => owners(env).includes(email) || !!(await staffRow(env, email))
 
 async function whoAmI(req, env) {
   const t = cookie(req, COOKIE)
   if (!t) return null
   const s = await env.DB.prepare('SELECT email FROM sessions WHERE token_hash = ? AND expires_at > ?').bind(await sha(t), Date.now()).first()
   if (!s) return null
-  if (admins(env).includes(s.email)) return { email: s.email, admin: true, name: s.email.split('@')[0].replace(/^./, (c) => c.toUpperCase()) }
+  if (owners(env).includes(s.email)) return { email: s.email, admin: true, owner: true, name: nameFrom(s.email) }
+  const st = await staffRow(env, s.email)
+  if (st) {
+    await env.DB.prepare('UPDATE staff SET last_seen = ? WHERE email = ?').bind(Date.now(), st.email).run()
+    return { email: st.email, admin: true, owner: false, name: st.name || nameFrom(st.email) }
+  }
   const p = await env.DB.prepare('SELECT * FROM people WHERE email = ?').bind(s.email).first()
   if (!p) return null
   await env.DB.prepare('UPDATE people SET last_seen = ? WHERE email = ?').bind(Date.now(), p.email).run()
@@ -72,7 +82,7 @@ export async function onRequest({ request, env, params }) {
     if (path === 'auth/start' && method === 'POST') {
       const email = clean((await body(request)).email, 200).toLowerCase()
       if (!isEmail(email)) throw new Err(400, 'Enter your email address.')
-      const known = admins(env).includes(email) || await env.DB.prepare('SELECT 1 FROM people WHERE email = ?').bind(email).first()
+      const known = await isStaff(env, email) || await env.DB.prepare('SELECT 1 FROM people WHERE email = ?').bind(email).first()
       // Same answer either way, so the form can't be used to test addresses.
       if (!known) return json({ ok: true })
       const now = Date.now()
@@ -149,6 +159,33 @@ export async function onRequest({ request, env, params }) {
     // ---------------- staff only
     if (!user.admin) throw new Err(403, 'Not allowed.')
 
+    // ---------------- team: everyone staff can see it, only owners change it
+    if (path === 'admin/team' && method === 'GET') {
+      const { results } = await env.DB.prepare('SELECT email, name, added_by, created_at, last_seen FROM staff ORDER BY created_at').all()
+      return json({ owners: owners(env), staff: results })
+    }
+
+    if (path === 'admin/team' && method === 'POST') {
+      if (!user.owner) throw new Err(403, 'Only an owner can change the team.')
+      const b = await body(request)
+      const email = clean(b.email, 200).toLowerCase()
+      if (!isEmail(email)) throw new Err(400, 'Enter their email address.')
+      if (owners(env).includes(email)) throw new Err(400, 'That address is already an owner.')
+      if (await env.DB.prepare('SELECT 1 FROM people WHERE email = ?').bind(email).first()) throw new Err(409, 'That email is set up as a client. Remove it from the client first.')
+      await env.DB.prepare('INSERT INTO staff (email, name, added_by, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(email) DO UPDATE SET name = excluded.name')
+        .bind(email, clean(b.name, 100) || null, user.email, Date.now()).run()
+      return json({ ok: true })
+    }
+
+    if (path === 'admin/team' && method === 'DELETE') {
+      if (!user.owner) throw new Err(403, 'Only an owner can change the team.')
+      const email = clean(q.get('email'), 200).toLowerCase()
+      if (owners(env).includes(email)) throw new Err(400, 'Owners are set in wrangler.toml, not here.')
+      await env.DB.prepare('DELETE FROM staff WHERE email = ?').bind(email).run()
+      await env.DB.prepare('DELETE FROM sessions WHERE email = ?').bind(email).run()
+      return json({ ok: true })
+    }
+
     if (path === 'admin/clients' && method === 'GET') {
       const { results } = await env.DB.prepare(`SELECT c.*,
           (SELECT COUNT(*) FROM requests r WHERE r.client_id = c.id AND r.status != 'done') AS open_requests,
@@ -182,7 +219,7 @@ export async function onRequest({ request, env, params }) {
       const c = await clientFor(env, user, b.client)
       const email = clean(b.email, 200).toLowerCase()
       if (!isEmail(email)) throw new Err(400, 'Enter their email address.')
-      if (admins(env).includes(email)) throw new Err(400, 'That is a staff address.')
+      if (await isStaff(env, email)) throw new Err(400, 'That is a staff address.')
       const taken = await env.DB.prepare('SELECT client_id FROM people WHERE email = ?').bind(email).first()
       if (taken && taken.client_id !== c.id) throw new Err(409, 'That email is already set up for another client.')
       await env.DB.prepare('INSERT INTO people (email, client_id, name, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(email) DO UPDATE SET name = excluded.name')

@@ -12,6 +12,15 @@ CREATE TABLE IF NOT EXISTS clients (
   created_at INTEGER NOT NULL
 );
 
+-- Staff added on the Team page. Owners come from OWNERS in wrangler.toml.
+CREATE TABLE IF NOT EXISTS staff (
+  email TEXT PRIMARY KEY,   -- lower case
+  name TEXT,
+  added_by TEXT,
+  created_at INTEGER NOT NULL,
+  last_seen INTEGER
+);
+
 CREATE TABLE IF NOT EXISTS people (
   email TEXT PRIMARY KEY,   -- lower case
   client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,

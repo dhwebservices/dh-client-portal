@@ -1,44 +1,13 @@
-const CACHE_NAME = 'dh-client-portal-v1'
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-]
-
-// Install — cache static assets
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
-  )
-  self.skipWaiting()
-})
-
-// Activate — clean up old caches
-self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
-  )
-  self.clients.claim()
-})
-
-// Fetch — network first, fall back to cache
-self.addEventListener('fetch', event => {
-  // Skip non-GET and cross-origin requests
-  if (event.request.method !== 'GET') return
-  if (!event.request.url.startsWith(self.location.origin)) return
-
-  event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Cache successful responses
-        if (response && response.status === 200) {
-          const clone = response.clone()
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone))
-        }
-        return response
-      })
-      .catch(() => caches.match(event.request))
-  )
+// The old client portal registered a service worker that cached its app shell.
+// This one replaces it, clears every cache it made and unregisters itself, so
+// returning visitors stop seeing the old portal.
+self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys()
+    await Promise.all(keys.map((k) => caches.delete(k)))
+    await self.registration.unregister()
+    const clients = await self.clients.matchAll({ type: 'window' })
+    clients.forEach((c) => c.navigate(c.url))
+  })())
 })

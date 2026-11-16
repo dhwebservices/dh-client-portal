@@ -1,0 +1,16 @@
+name = "dh-client-portal"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Signed-in with one of these addresses = staff view (every client, editing).
+ADMINS = "david@dhwebsiteservices.co.uk,jack@dhwebsiteservices.co.uk"
+APP_URL = "https://app.dhwebsiteservices.co.uk"
+# Email goes out through the main site's relay (functions/api/client-mail.js
+# in DH-Website-New), so this project holds no email key.
+MAIL_RELAY = "https://www.dhwebsiteservices.co.uk/api/client-mail"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dh-client-area"
+database_id = "937d115a-d015-4c49-b795-5b44bba9ba6f"

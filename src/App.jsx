@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from './api'
 import SignIn from './SignIn'
-import ClientPage from './ClientPage'
-import Staff from './Staff'
+import ClientApp from './client/ClientApp'
+import Staff from './staff/Staff'
 
 export function Bar({ me, onSignOut }) {
   return (
@@ -40,7 +40,7 @@ export default function App() {
     <>
       <Bar me={me} onSignOut={signOut} />
       <main className="wrap page">
-        {me.admin ? <Staff me={me} /> : <ClientPage me={me} />}
+        {me.admin ? <Staff me={me} /> : <ClientApp me={me} />}
       </main>
     </>
   )

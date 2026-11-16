@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, date } from './api'
+import { api, date } from '../api'
 
 /** Who has the staff view. Everyone on staff can see it; only owners change it. */
 export default function Team({ me }) {

@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS clients (
   plan TEXT,                -- e.g. "Care plan, £35 a month + VAT"
   created_at INTEGER NOT NULL
 );
+-- More client columns, request threads, files, approvals, notes, activity and
+-- stats are in migrations/0002_features.sql. For a fresh database run this
+-- file, then the migrations in order.
 
 -- Staff added on the Team page. Owners come from OWNERS in wrangler.toml.
 CREATE TABLE IF NOT EXISTS staff (

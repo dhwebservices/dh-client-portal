@@ -6,18 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:api": "wrangler pages dev dist --d1 DB --binding DEV_ECHO=1 --port 8788"
   },
   "dependencies": {
-    "@azure/msal-browser": "^3.10.0",
-    "@azure/msal-react": "^2.1.0",
-    "@supabase/supabase-js": "^2.43.0",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
-    "lucide-react": "^0.383.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.23.1"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

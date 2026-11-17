@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { Tabs, useHashTab } from '../ui'
+import { SideNav, useHashTab } from '../ui'
 import Home from './Home'
 import Website from './Website'
 import Requests from './Requests'
@@ -44,12 +44,9 @@ export default function ClientApp({ me, clientId, admin = false, onBack }) {
 
   return (
     <>
-      {onBack && <button className="link back" onClick={onBack}>← All clients</button>}
-      <div className="page__head">
-        <h1>{client.business}</h1>
-        {admin && <p>Staff view. Clients see these same tabs, without the edit controls and notes.</p>}
-      </div>
-      <Tabs tabs={tabs} tab={tab} go={go} label={client.business} />
+      <SideNav tabs={tabs} tab={tab} go={go} label={client.business} title={client.business} sub={admin ? 'Client' : 'Your business'} onBack={onBack} />
+      {admin && <p className="staff-note">Staff view of <b>{client.business}</b>. Clients see these same pages, without the edit controls and notes.</p>}
+      {tab !== 'home' && <div className="page__head"><span className="eyebrow">{client.business}</span><h1>{tabs.find((t) => t[0] === tab)?.[1]}</h1></div>}
       {tab === 'home' && <Home {...props} />}
       {tab === 'website' && <Website {...props} />}
       {tab === 'requests' && <Requests {...props} />}

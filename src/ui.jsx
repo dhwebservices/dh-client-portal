@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { upload, fileUrl, bytes, date } from './api'
 
 export function useForm(initial) {
@@ -57,6 +58,47 @@ export function Tabs({ tabs, tab, go, label }) {
   )
 }
 
+// Simple line icons for the side nav, drawn on a 20px grid.
+const ICONS = {
+  home: 'M3 9.5 10 4l7 5.5V16a1 1 0 0 1-1 1h-3.5v-4.5h-5V17H4a1 1 0 0 1-1-1z',
+  website: 'M3 4.5h14v11H3zM3 8h14M5.5 6.2h.01M7.5 6.2h.01',
+  requests: 'M4 4.5h12v8.5H9l-3.5 3v-3H4z',
+  files: 'M5 3h6.5L15 6.5V17H5zM11.5 3v3.5H15',
+  project: 'M3 10h3l2-5 4 10 2-5h3',
+  billing: 'M3 5.5h14v9H3zM3 8.5h14M6 12h3',
+  help: 'M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM8 8a2 2 0 1 1 2.7 1.9c-.5.2-.7.6-.7 1.1v.5M10 13.6h.01',
+  settings: 'M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4',
+  notes: 'M5 3h10v14H5zM7.5 7h5M7.5 10h5M7.5 13h3',
+  inbox: 'M3 11.5 5 4.5h10l2 7V16H3zM3 11.5h4l1 2h4l1-2h4',
+  clients: 'M7.5 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2.5 17c0-3 2.2-5 5-5s5 2 5 5M13 3.3a3 3 0 0 1 0 5.4M15 12.3c1.6.7 2.5 2.4 2.5 4.7',
+  activity: 'M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM10 6v4l2.5 2',
+  team: 'M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 17c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5',
+}
+export function Icon({ name }) {
+  return <svg className="ico" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d={ICONS[name] || ICONS.home} /></svg>
+}
+
+// The main navigation. It renders into the side bar (#side-nav, in App.jsx), so each
+// screen keeps owning its own tabs while the shell decides where they sit.
+export function SideNav({ tabs, tab, go, label, title, sub, onBack }) {
+  const [el, setEl] = useState(() => document.getElementById('side-nav'))
+  useEffect(() => { if (!el) setEl(document.getElementById('side-nav')) }, [el])
+  const nav = (
+    <>
+      {onBack && <button className="side__back" onClick={onBack}>← All clients</button>}
+      {title && <div className="side__title"><span className="side__label">{sub}</span><strong>{title}</strong></div>}
+      <nav className="side__nav" aria-label={label}>
+        {tabs.map(([key, text, badge]) => (
+          <button key={key} className={tab === key ? 'is-on' : ''} aria-current={tab === key ? 'page' : undefined} onClick={() => go(key)}>
+            <Icon name={key} /><span>{text}</span>{badge ? <span className="side__badge">{badge}</span> : null}
+          </button>
+        ))}
+      </nav>
+    </>
+  )
+  return el ? createPortal(nav, el) : nav
+}
+
 // Bar chart drawn to scale: every bar uses the same y scale, labels sit on real values.
 export function BarChart({ series, field = 'views', height = 140 }) {
   const max = Math.max(1, ...series.map((d) => d[field]))
@@ -70,7 +112,7 @@ export function BarChart({ series, field = 'views', height = 140 }) {
           {[0, 0.5, 1].map((f) => <line key={f} x1="0" x2="100" y1={height * f} y2={height * f} className="chart__grid" />)}
           {series.map((d, i) => {
             const h = (d[field] / nice) * height
-            return <rect key={d.day} x={i * w + w * 0.18} width={w * 0.64} y={height - h} height={h} className={d[field] ? 'chart__bar' : ''} />
+            return <rect key={d.day} x={i * w + w * 0.18} width={w * 0.64} y={height - h} height={h} className={d[field] ? (i === series.length - 1 ? 'chart__bar chart__bar--now' : 'chart__bar') : ''} />
           })}
         </svg>
       </div>

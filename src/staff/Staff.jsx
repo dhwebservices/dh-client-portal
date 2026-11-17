@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { Tabs, useHashTab } from '../ui'
+import { SideNav, useHashTab } from '../ui'
 import ClientApp from '../client/ClientApp'
 import Inbox from './Inbox'
 import Clients from './Clients'
@@ -25,7 +25,7 @@ export default function Staff({ me }) {
 
   return (
     <>
-      <Tabs label="Staff" tab={tab} go={go} tabs={[['inbox', 'Inbox', counts.inbox || null], ['clients', 'Clients'], ['activity', 'Activity'], ['team', 'Team']]} />
+      <SideNav label="Staff" title="DH team" sub="Signed in as staff" tab={tab} go={go} tabs={[['inbox', 'Inbox', counts.inbox || null], ['clients', 'Clients'], ['activity', 'Activity'], ['team', 'Team']]} />
       {tab === 'inbox' && <Inbox open={open} />}
       {tab === 'clients' && <Clients open={open} />}
       {tab === 'activity' && <Activity open={open} />}

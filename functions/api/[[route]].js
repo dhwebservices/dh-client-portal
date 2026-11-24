@@ -198,7 +198,7 @@ export async function onRequest(ctx) {
       if (c?.locked_until > now) throw new Err(429, 'Too many wrong codes. Try again in 15 minutes.')
       if (c?.last_sent > now - 45000) return json({ ok: true })
       const code = code6()
-      await env.DB.prepare('INSERT INTO codes (email, code_hash, expires_at, attempts, last_sent) VALUES (?, ?, ?, 0, ?) ON CONFLICT(email) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at, attempts = 0, last_sent = excluded.last_sent')
+      await env.DB.prepare('INSERT INTO codes (email, code_hash, expires_at, attempts, last_sent) VALUES (?, ?, ?, 0, ?) ON CONFLICT(email) DO UPDATE SET code_hash = excluded.code_hash, expires_at = excluded.expires_at, attempts = CASE WHEN codes.locked_until IS NOT NULL AND codes.locked_until <= excluded.last_sent THEN 0 ELSE codes.attempts END, locked_until = CASE WHEN codes.locked_until IS NOT NULL AND codes.locked_until <= excluded.last_sent THEN NULL ELSE codes.locked_until END, last_sent = excluded.last_sent')
         .bind(email, await sha(`${email}:${code}`), now + 10 * 60000, now).run()
       if (env.DEV_ECHO === '1' && new URL(request.url).hostname === 'localhost') return json({ ok: true, dev_code: code })
       if (!await mail(env, request, 'code', email, { code })) throw new Err(502, 'We could not send the code. Please try again, or ring 01443 805303.')
